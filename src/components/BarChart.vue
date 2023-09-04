@@ -1,62 +1,82 @@
 <template>
   <div>
-    <Bar :options="chartOptions" :data="chartData" />
+    <canvas id="grafico" width="400" height="400"></canvas>
   </div>
-  <h1>{{sensor1}}</h1>
-
-
+  <h1 id="sensor_01"></h1>
 </template>
 
 <script setup>
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
-import {onMounted, reactive, ref} from "vue";
+import {onMounted, onUpdated, ref} from "vue";
 import axios from 'axios'
+import Chart from "chart.js/auto";
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
-
-const data = ref({})
+const valores = ref([])
 const interval = ref(0)
-const sensor1 = ref(0)
-onMounted(
-    interval.value = setInterval(async()=>{
-        try {
-          let dado = await axios.get('http://127.0.0.1:1880/sensores')
-          data.value = dado.data
-          console.log(data.value.sensor0)
-          sensor1.value = data.value.sensor0
-          console.log(sensor1.value)
-          chartData.value.datasets[0].data[0] = parseFloat(data.value.sensor0)
-          chartData.value.datasets[0].data[1] = parseFloat(data.value.sensor1)
-          chartData.value.datasets[0].data[2] = parseFloat(data.value.sensor2)
-        }catch (error){
-          console.log(error)
-        }
-    },1000)
+const date = ref({})
 
-)
+const chartCanvas = ref(null)
+let grafico = null
 
+const mountedChart = async () => {
 
-const chartData = ref({
-  labels: [ 'January', 'February', 'March'],
-  datasets: [
-    {
-      label: 'Data One',
-      backgroundColor: '#f87979',
-      data: [10, 20, 12]
+  chartCanvas.value = document.getElementById('grafico')
+
+  let ctx = chartCanvas.value.getContext('2d')
+  console.log(ctx)
+  grafico = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [10,9,8,7,6,5,4,3,2,1],
+      datasets: [{
+        label: '# of Votes',
+        data: valores.value,
+        borderWidth: 1
+      }]
     },
-    {
-      label: 'Data One',
-      backgroundColor: '#000000',
-      data: [40, 20, 12]
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      },
+      responsive: true,
+      maintainAspectRatio: false,
     }
-  ]
+  })
+
+}
+const getData = async () => {
+  let historico = []
+  interval.value = setInterval(async()=>{
+
+  try {
+    date.value = await axios.get('http://localhost:1880/sensores')
+    date.value = date.value.data
+
+    let sensor = [date.value.sensor0, date.value.date_at]
+    historico.unshift(sensor)
+
+    if(historico.length> 11){
+      historico.pop()
+    }
+    let tam = 10
+    for (let i = 0; i <= tam; i++) {
+      valores.value[tam - i] = historico[i][1]
+    }
+    console.log(historico)
+    grafico.update()
+    document.getElementById('sensor_01').innerHTML = date.value.sensor1
+
+  }catch (error){
+    console.log(error)
+  }
+},1000)
+
+}
+
+onMounted(  ()=>{
+  mountedChart()
+  getData()
+
 })
-
-
-const chartOptions =  reactive(
-    {
-      responsive: true
-    }
-)
 </script>
