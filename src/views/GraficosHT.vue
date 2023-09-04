@@ -3,7 +3,7 @@
 import BarChart from "@/components/BarChart.vue";
 </script>
 
-<template class="text-blue-950">
+<template class="text-blue-950 ">
   <BarChart/>
 </template>
 
